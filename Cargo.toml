@@ -8,7 +8,9 @@ edition = "2021"
 
 # 正式发布游戏时记得把features的dynamic属性删除
 [dependencies]
-bevy = { version = "0.9.1", features = ["dynamic"]}
+bevy = { version = "0.10.1", features = ["dynamic_linking"]}
+bevy_rapier2d = "0.21.0"
+
 
 [workspace]
 resolver = "2"

@@ -1,54 +1,65 @@
-// bevy将 时间、声音、纹理、网格、渲染器 作为全局ECS资源
-use bevy::prelude::*;
+mod platforms;
+mod animation;
+mod player;
+
+use bevy::{prelude::*, window::WindowResolution};
+use bevy_rapier2d::prelude::{*, RapierPhysicsPlugin, NoUserData, RapierDebugRenderPlugin};
+
+use animation::AnimationPlugin;
+use platforms::PlatformsPlugin;
+use player::PlayerPlugin;
+
+const WINDOW_WIDTH: f32 = 1024.0;
+const WINDOW_HEIGHT: f32 = 720.0;
+const FLOOR_THICKNESS: f32 = 10.0;
+
+pub const WINDOW_BOTTOM_Y: f32 = WINDOW_HEIGHT / -2.0;
+const WINDOW_LEFT_X: f32 = WINDOW_WIDTH / -2.0;
+
+const COLOR_BACKGROUND: Color = Color::rgb(0.13, 0.13, 0.23);
+const COLOR_FLOOR: Color = Color::rgb(0.45, 0.55, 0.66);
+
 fn main() {
     App::new()
-    .add_plugins(DefaultPlugins)
-    .add_startup_system(setup)
-    .add_system(sprite_movement)
-    .run();
+        .insert_resource(ClearColor(COLOR_BACKGROUND))
+        .add_plugins(DefaultPlugins.set(WindowPlugin {
+            primary_window: Some(Window {
+                // title: "Bevy Platformer".into(),
+                // resolution: (WINDOW_WIDTH, WINDOW_HEIGHT).into(),
+                title: "Bevy Platformer".to_string(),
+                resolution: WindowResolution::new(WINDOW_WIDTH, WINDOW_HEIGHT),
+                resizable: true,
+                ..Default::default()
+            }),
+            ..Default::default()
+        }))
+        .add_plugin(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(200.0))
+        .add_plugin(RapierDebugRenderPlugin::default())
+        .add_plugin(PlatformsPlugin)
+        .add_plugin(PlayerPlugin)
+        .add_plugin(AnimationPlugin)
+        .add_startup_system(setup)
+        .run();
 }
 
-#[derive(Component)]
-enum Direction {
-    Up,
-    Down,
-    Left, 
-    Right,
+// 启动系统
+fn setup(mut commands: Commands) {
+    commands.spawn(Camera2dBundle::default());
+
+    // 地板
+    commands
+        .spawn(SpriteBundle {
+            sprite: Sprite {
+                color: COLOR_FLOOR,
+                ..Default::default()
+            },
+            transform: Transform {
+                translation: Vec3::new(0.0, WINDOW_BOTTOM_Y + (FLOOR_THICKNESS / 2.0), 0.0),
+                scale: Vec3::new(WINDOW_WIDTH, FLOOR_THICKNESS, 1.0),
+                ..Default::default()
+            },
+            ..Default::default()
+        })
+        .insert(RigidBody::Fixed)
+        .insert(Collider::cuboid(0.5, 0.5));
 }
-
-fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
-    commands.spawn(Camera2dBundle::default());  // 2d投影
-    commands.spawn((    // 直接录入元组
-    SpriteBundle {
-      texture: asset_server.load("branding/ferris.png"),   // 图形
-      transform: Transform::from_xyz(100., 0., 0.),     // 坐标
-      ..default()
-    },
-    Direction::Up,    // 初始移动方向
-    ));     
-}
-
-fn sprite_movement(time: Res<Time>, mut sprite_position: Query<(&mut Direction, &mut Transform)>) {
-    for (mut logo, mut transform) in &mut sprite_position {
-        match *logo {
-            Direction::Up => transform.translation.y += 150. * time.delta_seconds(),
-            Direction::Down => transform.translation.y -= 150. * time.delta_seconds(),
-            Direction::Left => transform.translation.x -= 150. * time.delta_seconds(),
-            Direction::Right => transform.translation.x += 150. * time.delta_seconds(),
-        }
-
-        if transform.translation.y > 200. {
-            *logo = Direction::Down;
-        } else if transform.translation.y < -200. {
-            *logo = Direction::Left;
-        } else if transform.translation.x < -200. {
-            *logo = Direction::Right;
-        } else if transform.translation.x > 200. {
-            *logo = Direction::Up;
-        }
-    }
-}
-
-
-
-
